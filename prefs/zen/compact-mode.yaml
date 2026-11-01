@@ -31,6 +31,11 @@
 - name: zen.view.compact.animate-sidebar
   value: true
 
+# How long (in milliseconds) the mouse has to rest on a hidden sidebar or
+# toolbar before it is shown
+- name: zen.view.compact.hover-open-delay
+  value: 100
+
 - name: zen.view.compact.show-sidebar-and-toolbar-on-hover
   value: true
 

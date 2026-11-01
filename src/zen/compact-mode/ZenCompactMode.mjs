@@ -27,6 +27,15 @@ XPCOMUtils.defineLazyPreferenceGetter(
   true
 );
 
+// How long (in milliseconds) the mouse has to rest on a hidden element before
+// it is shown, so brushing past the screen edge does not open it
+XPCOMUtils.defineLazyPreferenceGetter(
+  lazy,
+  "COMPACT_MODE_HOVER_OPEN_DELAY",
+  "zen.view.compact.hover-open-delay",
+  100
+);
+
 XPCOMUtils.defineLazyPreferenceGetter(
   lazy,
   "COMPACT_MODE_SHOW_SIDEBAR_AND_TOOLBAR_ON_HOVER",
@@ -774,7 +783,7 @@ window.gZenCompactModeManager = {
             return;
           }
           this._setElementExpandAttribute(target, true);
-        }, this.HOVER_HACK_DELAY);
+        }, this.HOVER_HACK_DELAY + lazy.COMPACT_MODE_HOVER_OPEN_DELAY);
       };
 
       const onLeave = event => {
@@ -875,6 +884,10 @@ window.gZenCompactModeManager = {
             continue;
           }
           const target = entry.element;
+          if (!target.hasAttribute("zen-has-hover")) {
+            // Leaving the window must not open an element that was closed
+            continue;
+          }
           const boundAxis =
             entry.screenEdge === "right" || entry.screenEdge === "left"
               ? "y"
