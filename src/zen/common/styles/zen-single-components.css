@@ -707,6 +707,10 @@
     -webkit-text-fill-color: transparent;
     animation: zen-text-gradient 5s linear infinite;
     font-size: initial;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
   }
 
   #mainContentSubheader {
