@@ -97,6 +97,10 @@ export class nsZenSessionManager {
    * A deferred task to create backups of the session file.
    */
   #deferredBackupTask = null;
+  /**
+   * Whether the session file on disk holds at least one space.
+   */
+  #savedFileHasSpaces = false;
 
   init() {
     this.log("Initializing session manager");
@@ -144,7 +148,8 @@ export class nsZenSessionManager {
         .filter(file => file.startsWith(prefix))
         .sort()
         .reverse();
-      backupFiles.push(files[0]);
+      // Callers skip backups without spaces, so offer every one, newest first.
+      backupFiles.push(...files);
     } catch {
       /* ignore errors reading backup folder */
     }
@@ -255,6 +260,7 @@ export class nsZenSessionManager {
     try {
       await this.#file.load();
       this._dataFromFile = this.#file.data;
+      this.#savedFileHasSpaces = !!this._dataFromFile?.spaces?.length;
       if (!this._dataFromFile?.spaces?.length) {
         // Go to the catch block to try to recover from backup files
         // if the file is empty or has invalid data, as it can happen if the app
@@ -599,19 +605,27 @@ export class nsZenSessionManager {
    */
   saveState(state, soon = false) {
     let windows = state?.windows || [];
-    windows = windows.filter(win => this.#isWindowSaveable(win));
+    // A window that has not restored its spaces yet reports no spaces and no
+    // tabs, saving it would wipe the session.
+    windows = windows.filter(
+      win => this.#isWindowSaveable(win) && win.spaces?.length
+    );
     if (!windows.length) {
       // Don't save (or even collect) anything in permanent private
       // browsing mode. We also don't want to save if there are no windows.
       return;
     }
-    const cleanPath = PathUtils.join(this.#backupFolderPath, "clean.jsonlz4");
-    IOUtils.copy(this.#storeFilePath, cleanPath, { recursive: true }).catch(
-      () => {
-        /* ignore errors creating clean backup, as it is not critical and
-         * we want to save the session even if we fail to create it */
-      }
-    );
+    // Only keep the file as the clean backup while it still holds spaces,
+    // otherwise a bad save would also overwrite the backup.
+    if (this.#savedFileHasSpaces) {
+      const cleanPath = PathUtils.join(this.#backupFolderPath, "clean.jsonlz4");
+      IOUtils.copy(this.#storeFilePath, cleanPath, { recursive: true }).catch(
+        () => {
+          /* ignore errors creating clean backup, as it is not critical and
+           * we want to save the session even if we fail to create it */
+        }
+      );
+    }
     this.#collectWindowData(windows);
     // Let interested consumers (e.g. Firefox Sync) know fresh sidebar data
     // is available, without this module knowing anything about them.
@@ -619,6 +633,7 @@ export class nsZenSessionManager {
     // This would save the data to disk asynchronously or when quitting the app.
     let sidebar = this.#sidebarWithoutCloning;
     this.#file.data = sidebar;
+    this.#savedFileHasSpaces = !!sidebar.spaces?.length;
     if (soon) {
       this.#file.saveSoon();
     } else {
