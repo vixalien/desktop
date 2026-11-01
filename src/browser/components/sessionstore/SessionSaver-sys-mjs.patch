@@ -23,7 +23,7 @@ index 1f26bc5fdb83f55bdf0b9b7d01fafe1cd37f77f4..5916f741d0fa04c392dcdd10f843e595
      this._maybeClearCookiesAndStorage(state);
  
      Glean.sessionRestore.collectData.stopAndAccumulate(timerId);
-+    lazy.ZenSessionStore.saveState(state);
++    lazy.ZenSessionStore.saveState(state, lazy.RunState.isRunning);
      return this._writeState(state);
    },
  
