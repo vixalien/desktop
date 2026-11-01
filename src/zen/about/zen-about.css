@@ -177,16 +177,20 @@
   &:indeterminate::-moz-progress-bar {
     width: 30%;
     animation: zen-about-progress-slide 1.2s ease-in-out infinite alternate;
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+    }
   }
 }
 
 @keyframes zen-about-progress-slide {
   from {
-    margin-inline-start: 0;
+    translate: 0;
   }
 
   to {
-    margin-inline-start: 70%;
+    translate: calc(70 / 30 * 100%);
   }
 }
 
