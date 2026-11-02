@@ -1948,10 +1948,16 @@ class nsZenWorkspaces {
     if (!this.workspaceEnabled) {
       return workspace;
     }
-    this.#currentSpaceSwitchContext.animations.forEach(animation => {
-      animation.complete();
-    });
-    await this.#currentSpaceSwitchContext.promise;
+    // Wait until no other switch is running. Callers that were waiting on the
+    // same switch must queue up, otherwise they would all start at once.
+    let previousContext;
+    do {
+      previousContext = this.#currentSpaceSwitchContext;
+      previousContext.animations.forEach(animation => {
+        animation.complete();
+      });
+      await previousContext.promise;
+    } while (previousContext !== this.#currentSpaceSwitchContext);
     let { resolve, promise } = Promise.withResolvers();
     this.#currentSpaceSwitchContext = {
       promise,
@@ -1971,7 +1977,7 @@ class nsZenWorkspaces {
   }
 
   _cancelSwipeAnimation() {
-    this.#animateTabs(this.getActiveWorkspaceFromCache(), true);
+    return this.#animateTabs(this.getActiveWorkspaceFromCache(), true);
   }
 
   async #performWorkspaceChange(
@@ -1986,7 +1992,7 @@ class nsZenWorkspaces {
       previousWorkspace.uuid === workspace.uuid &&
       !alwaysChange
     ) {
-      this._cancelSwipeAnimation();
+      await this._cancelSwipeAnimation();
       return;
     }
 
