@@ -1,0 +1,89 @@
+name: Fork Linux build (free runner)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Build Linux x86_64 (no PGO)
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+      SURFER_COMPAT: x86_64
+      SURFER_PLATFORM: linux
+      ZEN_RELEASE_BRANCH: twilight
+      ZEN_GA_DISABLE_PGO: "1"
+
+    steps:
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update --fix-missing
+          sudo apt-get install -y python3 python3-pip dos2unix yasm nasm build-essential libgtk2.0-dev libpython3-dev m4 uuid libasound2-dev libcurl4-openssl-dev libdbus-1-dev libdrm-dev libdbus-glib-1-dev libgtk-3-dev libpulse-dev libx11-xcb-dev libxt-dev xvfb lld llvm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Load Surfer CI setup
+        run: npm run surfer -- ci --brand twilight --display-version 1.25t
+
+      - name: Download Firefox source and dependencies
+        run: npm run download
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain $(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)
+          source $HOME/.cargo/env
+          rustup target add x86_64-unknown-linux-gnu
+
+      - name: Import
+        run: |
+          . "$HOME/.cargo/env"
+          npm run import
+
+      - name: Build language packs
+        run: sh scripts/download-language-packs.sh
+
+      - name: Bootstrap
+        run: |
+          cd engine
+          ./mach --no-interactive bootstrap --application-choice browser
+
+      - name: Build
+        run: bash .github/workflows/src/release-build.sh
+
+      - name: Package
+        run: |
+          export ZEN_RELEASE=1
+          npm run package
+
+      - name: Rename artifacts
+        run: mv dist/zen-*.tar.xz zen.linux-x86_64.tar.xz
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 7
+          name: zen.linux-x86_64.tar.xz
+          path: ./zen.linux-x86_64.tar.xz
