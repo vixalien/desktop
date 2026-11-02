@@ -203,6 +203,9 @@
   /* Transitions */
   --zen-tabbox-element-indent-transition: margin-inline-start 0.1s ease-in-out;
   --zen-hidden-toolbar-transition-duration: 0.15s;
+  @media (prefers-reduced-motion: reduce) {
+    --zen-hidden-toolbar-transition-duration: 0s;
+  }
   --zen-hidden-toolbar-transition: var(--zen-hidden-toolbar-transition-duration) ease-in-out;
 
   /* XUL */

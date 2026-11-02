@@ -439,6 +439,7 @@ window.gZenCompactModeManager = {
       const canHideSidebar = this.canHideSidebar;
       let canAnimate =
         lazy.COMPACT_MODE_CAN_ANIMATE_SIDEBAR &&
+        !gReduceMotion &&
         !this.isSidebarPotentiallyOpen() &&
         !this._preventAnimateCollapse;
       delete this._preventAnimateCollapse;
