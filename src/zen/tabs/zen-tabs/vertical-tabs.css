@@ -743,7 +743,19 @@ zen-library {
   --zen-toolbox-max-width: calc(var(--tab-min-width) + var(--zen-toolbox-padding) * 2);
 }
 
+/* Animate between the expanded and the collapsed sidebar instead of snapping. */
+@media not (prefers-reduced-motion: reduce) {
+  :root:not([zen-compact-mode="true"]) #navigator-toolbox {
+    transition:
+      width 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+      min-width 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+      max-width 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
 #navigator-toolbox:not([zen-sidebar-expanded="true"]) {
+  /* The inline width belongs to the expanded sidebar, so it can not animate on its own */
+  width: var(--zen-toolbox-max-width) !important;
   max-width: var(--zen-toolbox-max-width) !important;
   min-width: var(--zen-toolbox-max-width) !important;
   padding-bottom: var(--zen-toolbox-padding);

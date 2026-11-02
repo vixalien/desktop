@@ -83,6 +83,9 @@
       transition:
         translate 0.15s ease,
         visibility 0.15s ease;
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
       bottom: var(--zen-compact-float);
       padding: 0 var(--zen-compact-float) !important;
       width: unset !important;
@@ -274,6 +277,9 @@
       );
       --zen-compact-mode-time: 0.25s;
       transition: translate var(--zen-compact-mode-time) var(--zen-compact-mode-func);
+      @media (prefers-reduced-motion: reduce) {
+        transition: none;
+      }
 
       :root:not([supress-primary-adjustment='true']) & {
         #titlebar {
