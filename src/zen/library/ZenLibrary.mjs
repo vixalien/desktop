@@ -104,7 +104,9 @@ export class ZenLibrary extends MozLitElement {
         : {}),
       media: lazy.ZenLibraryMediaSection,
       downloads: lazy.ZenLibraryDownloadsSection,
-      boosts: lazy.ZenLibraryBoostsSection,
+      ...(Services.prefs.getBoolPref("zen.boosts.enabled", true)
+        ? { boosts: lazy.ZenLibraryBoostsSection }
+        : {}),
       ...(!window.gZenWorkspaces.privateWindowOrDisabled
         ? {
             spaces: lazy.ZenLibrarySpacesSection,
