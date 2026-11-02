@@ -56,6 +56,10 @@ const BROWSER_STARTUP_RESUME_SESSION = 3;
 // debouncer to kick off a regeneration.
 const REGENERATION_DEBOUNCE_RATE_MS = 10 * 60 * 1000; // 10 minutes
 
+// The minimum amount of time (in milliseconds) between two refreshes of the
+// clean backup copy, unless the session is being saved immediately.
+const CLEAN_BACKUP_MIN_AGE_MS = 10 * 60 * 1000; // 10 minutes
+
 /**
  * Class representing the sidebar object stored in the session file.
  * This object holds all the data related to tabs, groups, folders
@@ -101,6 +105,12 @@ export class nsZenSessionManager {
    * Whether the session file on disk holds at least one space.
    */
   #savedFileHasSpaces = false;
+  /**
+   * The last time the clean backup copy was refreshed.
+   *
+   * @type {number}
+   */
+  #lastCleanBackupTime = 0;
 
   init() {
     this.log("Initializing session manager");
@@ -596,6 +606,34 @@ export class nsZenSessionManager {
   }
 
   /**
+   * Copies the session file on disk to the clean backup file. A deferred save
+   * only refreshes it when the last copy is old enough, as copying the whole
+   * file on every save is a lot of disk writes. An immediate save (shutdown
+   * or startup) always refreshes it.
+   *
+   * @param {boolean} soon Whether the current save is a deferred one.
+   */
+  #refreshCleanBackup(soon) {
+    // Only keep the file as the clean backup while it still holds spaces,
+    // otherwise a bad save would also overwrite the backup.
+    if (!this.#savedFileHasSpaces) {
+      return;
+    }
+    const now = Date.now();
+    if (soon && now - this.#lastCleanBackupTime < CLEAN_BACKUP_MIN_AGE_MS) {
+      return;
+    }
+    this.#lastCleanBackupTime = now;
+    const cleanPath = PathUtils.join(this.#backupFolderPath, "clean.jsonlz4");
+    IOUtils.copy(this.#storeFilePath, cleanPath, { recursive: true }).catch(
+      () => {
+        /* ignore errors creating clean backup, as it is not critical and
+         * we want to save the session even if we fail to create it */
+      }
+    );
+  }
+
+  /**
    * Saves the current session state. Collects data and writes to disk.
    *
    * @param {object} state The current session state.
@@ -615,17 +653,7 @@ export class nsZenSessionManager {
       // browsing mode. We also don't want to save if there are no windows.
       return;
     }
-    // Only keep the file as the clean backup while it still holds spaces,
-    // otherwise a bad save would also overwrite the backup.
-    if (this.#savedFileHasSpaces) {
-      const cleanPath = PathUtils.join(this.#backupFolderPath, "clean.jsonlz4");
-      IOUtils.copy(this.#storeFilePath, cleanPath, { recursive: true }).catch(
-        () => {
-          /* ignore errors creating clean backup, as it is not critical and
-           * we want to save the session even if we fail to create it */
-        }
-      );
-    }
+    this.#refreshCleanBackup(soon);
     this.#collectWindowData(windows);
     // Let interested consumers (e.g. Firefox Sync) know fresh sidebar data
     // is available, without this module knowing anything about them.
