@@ -134,7 +134,9 @@ export class nsZenSiteDataPanel {
 
   checkIfTabIsBoosted() {
     const domain = this.#getCurrentDomain();
-    const isBoosted = lazy.gZenBoostsManager.registeredBoostForDomain(domain);
+    const isBoosted =
+      Services.prefs.getBoolPref("zen.boosts.enabled", true) &&
+      lazy.gZenBoostsManager.registeredBoostForDomain(domain);
     if (isBoosted) {
       this.anchor.setAttribute("boosting", "true");
     } else {
@@ -248,7 +250,10 @@ export class nsZenSiteDataPanel {
     const section = list.closest(".zen-site-data-section");
     section.hidden = true;
 
-    if (!canBoostSite) {
+    if (
+      !canBoostSite ||
+      !Services.prefs.getBoolPref("zen.boosts.enabled", true)
+    ) {
       return;
     }
 
